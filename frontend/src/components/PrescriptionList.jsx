@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import { getPrescriptions } from '../services/api';
 import { Pill } from 'lucide-react';
 
 function PrescriptionItem({ name, dosage, frequency }) {
@@ -20,14 +20,21 @@ export default function PrescriptionList() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [searchParams] = useSearchParams();
   const patientName = searchParams.get('name');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchPrescriptions = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/prescriptions?patient_name=${encodeURIComponent(patientName)}`);
-        setPrescriptions(response.data);
+        setLoading(true);
+        const data = await getPrescriptions(patientName);
+        setPrescriptions(data);
+        setError(null);
       } catch (error) {
         console.error('Error fetching prescriptions:', error);
+        setError('Failed to fetch prescriptions. Please try again later.');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -35,6 +42,14 @@ export default function PrescriptionList() {
       fetchPrescriptions();
     }
   }, [patientName]);
+
+  if (loading) {
+    return <div>Loading prescriptions...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
 
   return (
     <div>

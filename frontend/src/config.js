@@ -1,0 +1,1 @@
+export const API_URL = 'https://patient-health-monitoring-system-02b7.onrender.com';

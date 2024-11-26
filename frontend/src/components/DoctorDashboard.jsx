@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { getPrescriptions, createPrescription, updatePrescription, deletePrescription } from '../services/api';
 
 export default function DoctorDashboard() {
   const [prescriptions, setPrescriptions] = useState([]);
@@ -10,6 +10,8 @@ export default function DoctorDashboard() {
     frequency: '',
   });
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchPrescriptions();
@@ -17,10 +19,15 @@ export default function DoctorDashboard() {
 
   const fetchPrescriptions = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/prescriptions');
-      setPrescriptions(response.data);
+      setLoading(true);
+      const data = await getPrescriptions();
+      setPrescriptions(data);
+      setError(null);
     } catch (error) {
       console.error('Error fetching prescriptions:', error);
+      setError('Failed to fetch prescriptions. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,15 +40,16 @@ export default function DoctorDashboard() {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/prescriptions/${editingId}`, newPrescription);
+        await updatePrescription(editingId, newPrescription);
       } else {
-        await axios.post('http://localhost:5000/prescriptions', newPrescription);
+        await createPrescription(newPrescription);
       }
       setNewPrescription({ patientName: '', medication: '', dosage: '', frequency: '' });
       setEditingId(null);
       fetchPrescriptions();
     } catch (error) {
       console.error('Error saving prescription:', error);
+      setError('Failed to save prescription. Please try again.');
     }
   };
 
@@ -52,16 +60,22 @@ export default function DoctorDashboard() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/prescriptions/${id}`);
+      await deletePrescription(id);
       fetchPrescriptions();
     } catch (error) {
       console.error('Error deleting prescription:', error);
+      setError('Failed to delete prescription. Please try again.');
     }
   };
+
+  if (loading) {
+    return <div>Loading prescriptions...</div>;
+  }
 
   return (
     <div className="p-6">
       <h1 className="mb-6 text-3xl font-bold text-gray-800">Doctor Dashboard</h1>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <h2 className="text-2xl font-bold mb-4">{editingId ? 'Edit Prescription' : 'Create New Prescription'}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">

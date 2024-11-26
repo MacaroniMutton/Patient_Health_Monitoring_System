@@ -7,52 +7,53 @@ on:
     branches: [ main ]
 
 jobs:
-  test-backend:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    
+    # Backend tests
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    - name: Install dependencies
+    - name: Install backend dependencies
       run: |
         cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Run tests
+    - name: Run backend tests
       run: |
         cd backend
-        python -m unittest test_app.py
-
-  test-frontend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js
+        python -m unittest discover tests
+    
+    # Frontend tests
+    - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
         node-version: '14.x'
-    - name: Install dependencies
+    - name: Install frontend dependencies
       run: |
         cd frontend
         npm ci
-    - name: Run tests
+    - name: Run frontend tests
       run: |
         cd frontend
         npm test
 
   deploy:
-    needs: [test-backend, test-frontend]
+    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
     - uses: actions/checkout@v2
+    
+    # Deploy to Render
     - name: Deploy to Render
       env:
         RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
       run: |
-        curl -X POST https://api.render.com/v1/deploys \
+        curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY" \
-          -H "Content-Type: application/json" \
-          -d '{"service_id": "YOUR_RENDER_SERVICE_ID"}'
+          -H "Content-Type: application/json"
